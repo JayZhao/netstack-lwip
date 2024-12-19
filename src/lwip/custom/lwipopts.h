@@ -104,7 +104,7 @@
 #if defined __APPLE__
 #include <TargetConditionals.h>
 #if TARGET_OS_IPHONE
-#define MEM_SIZE (512 * 1024)
+#define MEM_SIZE (2 * 1024 * 1024)
 #else
 #define MEM_SIZE (2 * 1024 * 1024)
 #endif
@@ -113,7 +113,7 @@
 #endif
 
 #define MEMP_NUM_TCP_SEG 4096
-#define PBUF_POOL_SIZE 512
+#define PBUF_POOL_SIZE 1024
 
 // #define TCP_MSS 1460
 // #define TCP_WND (16 * TCP_MSS)
