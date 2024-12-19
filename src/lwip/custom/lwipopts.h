@@ -67,7 +67,7 @@
 
 #if TARGET_OS_IPHONE
 #define LWIP_TCP_KEEPALIVE 1
-#define MEMP_NUM_TCP_PCB 256
+#define MEMP_NUM_TCP_PCB 1024
 #else
 #define MEMP_NUM_TCP_PCB 1024
 #endif
