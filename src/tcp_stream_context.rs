@@ -11,6 +11,7 @@ use super::LWIPMutexGuard;
 
 pub struct TcpStreamContextInner {
     pub local_addr: SocketAddr,
+    #[allow(dead_code)]
     pub remote_addr: SocketAddr,
     pub read_tx: Option<UnboundedSender<Vec<u8>>>,
     pub read_rx: UnboundedReceiver<Vec<u8>>,
