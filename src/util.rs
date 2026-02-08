@@ -17,10 +17,10 @@ pub fn to_socket_addr(addr: &ip_addr_t, port: u16_t) -> SocketAddr {
                 let p2 = addr[2].to_ne_bytes();
                 let p3 = addr[3].to_ne_bytes();
                 let mut p = [0u8; 16];
-                (&mut p[0..4]).copy_from_slice(&p0);
-                (&mut p[4..8]).copy_from_slice(&p1);
-                (&mut p[8..12]).copy_from_slice(&p2);
-                (&mut p[12..16]).copy_from_slice(&p3);
+                p[0..4].copy_from_slice(&p0);
+                p[4..8].copy_from_slice(&p1);
+                p[8..12].copy_from_slice(&p2);
+                p[12..16].copy_from_slice(&p3);
                 let addr = Ipv6Addr::from(p);
                 SocketAddr::new(IpAddr::V6(addr), port)
             }

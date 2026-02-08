@@ -1,5 +1,6 @@
-use std::{io, net::SocketAddr, os::raw, pin::Pin};
+use core::ffi;
 use std::marker::PhantomPinned;
+use std::{io, net::SocketAddr, pin::Pin};
 
 use futures::stream::Stream;
 use futures::task::{Context, Poll, Waker};
@@ -12,7 +13,7 @@ use super::util;
 use crate::Error;
 
 pub unsafe extern "C" fn udp_recv_cb(
-    arg: *mut raw::c_void,
+    arg: *mut ffi::c_void,
     _pcb: *mut udp_pcb,
     p: *mut pbuf,
     addr: *const ip_addr_t,
@@ -24,14 +25,16 @@ pub unsafe extern "C" fn udp_recv_cb(
         warn!("udp socket has been closed");
         return;
     }
-    let socket = &mut *(arg as *mut UdpSocket);
-    let src_addr = util::to_socket_addr(&*addr, port);
-    let dst_addr = util::to_socket_addr(&*dst_addr, dst_port);
-    let tot_len = std::ptr::read_unaligned(p).tot_len;
+    let socket = unsafe { &mut *(arg as *mut UdpSocket) };
+    let src_addr = util::to_socket_addr(unsafe { &*addr }, port);
+    let dst_addr = util::to_socket_addr(unsafe { &*dst_addr }, dst_port);
+    let tot_len = unsafe { std::ptr::read_unaligned(p) }.tot_len;
     let mut buf = Vec::with_capacity(tot_len as usize);
-    pbuf_copy_partial(p, buf.as_mut_ptr() as *mut _, tot_len, 0);
-    buf.set_len(tot_len as usize);
-    pbuf_free(p);
+    unsafe {
+        pbuf_copy_partial(p, buf.as_mut_ptr() as *mut _, tot_len, 0);
+        buf.set_len(tot_len as usize);
+        pbuf_free(p);
+    }
     if let Err(_) = socket.tx.try_send((buf, src_addr, dst_addr)) {
         // log::trace!("try send udp pkt failed (netstack): {}", e);
     }
@@ -98,7 +101,7 @@ impl UdpSocket {
                 error!("bind UDP failed: {}", err);
                 return Err(Error::LwIP(err));
             }
-            let arg = &*socket as *const UdpSocket as *mut raw::c_void;
+            let arg = &*socket as *const UdpSocket as *mut ffi::c_void;
             udp_recv(pcb, Some(udp_recv_cb), arg);
             Ok(socket)
         }

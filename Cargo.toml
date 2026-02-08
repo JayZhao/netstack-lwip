@@ -1,19 +1,22 @@
 [package]
 name = "netstack-lwip"
 version = "0.3.4"
-edition = "2021"
+edition = "2024"
+description = "A lightweight network stack that converts TUN interface packets to TCP streams and UDP packets, powered by lwIP"
+license = "MIT"
+repository = "https://github.com/nickcychen/netstack-lwip"
+keywords = ["network", "lwip", "tun", "tcp", "udp"]
+categories = ["network-programming"]
 build = "build.rs"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-tokio = { version = "1", features = ["sync", "io-util", "net", "time", "rt", "rt-multi-thread"] }
-futures = "0.3"
-log = "0.4"
-anyhow = "1.0"
-bytes = "1"
-thiserror = "2"
+tokio = { version = "*", features = ["sync", "io-util", "net", "time", "rt", "rt-multi-thread"] }
+futures = "*"
+log = "*"
+anyhow = "*"
+bytes = "*"
+thiserror = "*"
 
 [build-dependencies]
-cc = "1.2"
-bindgen = "0.71"
+cc = "*"
+bindgen = "*"

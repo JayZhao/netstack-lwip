@@ -1,6 +1,7 @@
+use core::ffi;
 use std::marker::PhantomPinned;
 use std::ptr::null_mut;
-use std::{net::SocketAddr, os::raw, pin::Pin};
+use std::{net::SocketAddr, pin::Pin};
 
 use futures::stream::Stream;
 use futures::task::{Context, Poll};
@@ -13,7 +14,7 @@ use super::LWIP_MUTEX;
 use crate::Error;
 
 #[allow(unused_variables)]
-pub extern "C" fn tcp_accept_cb(arg: *mut raw::c_void, newpcb: *mut tcp_pcb, err: err_t) -> err_t {
+pub extern "C" fn tcp_accept_cb(arg: *mut ffi::c_void, newpcb: *mut tcp_pcb, err: err_t) -> err_t {
     if arg.is_null() {
         warn!("tcp listener has been closed");
         return err_enum_t_ERR_CONN as err_t;
@@ -67,7 +68,7 @@ impl TcpListener {
                 receiver,
                 _pin: PhantomPinned::default(),
             });
-            let arg = &*listener as *const TcpListener as *mut raw::c_void;
+            let arg = &*listener as *const TcpListener as *mut ffi::c_void;
             tcp_arg(tpcb, arg);
             tcp_accept(tpcb, Some(tcp_accept_cb));
             Ok(listener)

@@ -24,7 +24,6 @@ pub extern "C" fn output_ip4(netif: *mut netif, p: *mut pbuf, ipaddr: *const ip4
 }
 
 #[allow(unused_variables)]
-#[allow(unused)]
 pub extern "C" fn output_ip6(netif: *mut netif, p: *mut pbuf, ipaddr: *const ip6_addr_t) -> err_t {
     output(netif, p)
 }

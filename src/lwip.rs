@@ -3,6 +3,7 @@
 #![allow(non_snake_case)]
 #![allow(improper_ctypes)]
 #![allow(dead_code)]
+#![allow(unsafe_op_in_unsafe_fn)]
 #![allow(clippy::all)]
 
 // Note the bindings are generated on macOS.

@@ -1,5 +1,6 @@
+use core::ffi;
 use std::marker::PhantomPinned;
-use std::{io, os::raw, pin::Pin, sync::Once, time};
+use std::{io, pin::Pin, sync::Once, time};
 
 use futures::sink::Sink;
 use futures::stream::Stream;
@@ -147,7 +148,7 @@ impl Sink<Vec<u8>> for NetStack {
                 }
                 pbuf_take(
                     pbuf,
-                    item.as_ptr() as *const raw::c_void,
+                    item.as_ptr() as *const ffi::c_void,
                     item.len() as u16_t,
                 );
 

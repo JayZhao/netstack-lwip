@@ -1,5 +1,6 @@
+use core::ffi;
 use std::marker::PhantomPinned;
-use std::{cmp::min, io, net::SocketAddr, os::raw, pin::Pin};
+use std::{cmp::min, io, net::SocketAddr, pin::Pin};
 
 use bytes::BytesMut;
 use futures::task::{Context, Poll};
@@ -16,7 +17,7 @@ use super::LWIP_MUTEX;
 
 #[allow(unused_variables)]
 pub unsafe extern "C" fn tcp_recv_cb(
-    arg: *mut raw::c_void,
+    arg: *mut ffi::c_void,
     tpcb: *mut tcp_pcb,
     p: *mut pbuf,
     err: err_t,
@@ -29,7 +30,7 @@ pub unsafe extern "C" fn tcp_recv_cb(
     // SAFETY: tcp_recv_cb is called from tcp_input or sys_check_timeouts only when
     // a data packet or previously refused data is received. Thus lwip_mutex must be locked.
     // See also `<NetStackImpl as AsyncWrite>::poll_write`.
-    let ctx = &mut *TcpStreamContext::assume_locked(arg as *const TcpStreamContext);
+    let ctx = unsafe { &mut *TcpStreamContext::assume_locked(arg as *const TcpStreamContext) };
 
     if p.is_null() {
         trace!("netstack tcp eof {}", ctx.local_addr);
@@ -37,21 +38,23 @@ pub unsafe extern "C" fn tcp_recv_cb(
         return err_enum_t_ERR_OK as err_t;
     }
 
-    let pbuflen = std::ptr::read_unaligned(p).tot_len;
+    let pbuflen = unsafe { std::ptr::read_unaligned(p) }.tot_len;
     let mut buf = Vec::with_capacity(pbuflen as usize);
-    pbuf_copy_partial(p, buf.as_mut_ptr() as _, pbuflen, 0);
-    buf.set_len(pbuflen as usize);
+    unsafe {
+        pbuf_copy_partial(p, buf.as_mut_ptr() as _, pbuflen, 0);
+        buf.set_len(pbuflen as usize);
+    }
 
     if !buf.is_empty() {
         ctx.read_tx.as_ref().map(|tx| tx.send(buf));
     }
 
-    pbuf_free(p);
+    unsafe { pbuf_free(p) };
     err_enum_t_ERR_OK as err_t
 }
 
 #[allow(unused_variables)]
-pub extern "C" fn tcp_sent_cb(arg: *mut raw::c_void, tpcb: *mut tcp_pcb, len: u16_t) -> err_t {
+pub extern "C" fn tcp_sent_cb(arg: *mut ffi::c_void, tpcb: *mut tcp_pcb, len: u16_t) -> err_t {
     // SAFETY: tcp_sent_cb is called from tcp_input only when
     // an ACK packet is received. Thus lwip_mutex must be locked.
     // See also `<NetStackImpl as AsyncWrite>::poll_write`.
@@ -64,7 +67,7 @@ pub extern "C" fn tcp_sent_cb(arg: *mut raw::c_void, tpcb: *mut tcp_pcb, len: u1
 }
 
 #[allow(unused_variables)]
-pub extern "C" fn tcp_err_cb(arg: *mut ::std::os::raw::c_void, err: err_t) {
+pub extern "C" fn tcp_err_cb(arg: *mut ffi::c_void, err: err_t) {
     // SAFETY: tcp_err_cb is called from
     // tcp_input, tcp_abandon, tcp_abort, tcp_alloc and tcp_new.
     // Thus lwip_mutex must be locked before calling any of these.
@@ -78,7 +81,7 @@ pub extern "C" fn tcp_err_cb(arg: *mut ::std::os::raw::c_void, err: err_t) {
 }
 
 #[allow(unused_variables)]
-pub extern "C" fn tcp_poll_cb(arg: *mut ::std::os::raw::c_void, tpcb: *mut tcp_pcb) -> err_t {
+pub extern "C" fn tcp_poll_cb(arg: *mut ffi::c_void, tpcb: *mut tcp_pcb) -> err_t {
     let ctx = &*unsafe { TcpStreamContext::assume_locked(arg as *const TcpStreamContext) };
     // trace!("netstack tcp poll {}", &ctx.local_addr);
     if let Some(waker) = ctx.write_waker.as_ref() {
@@ -121,7 +124,7 @@ impl TcpStream {
                 _pin: PhantomPinned::default(),
             });
             let arg = &stream.callback_ctx as *const _;
-            tcp_arg(pcb, arg as *mut raw::c_void);
+            tcp_arg(pcb, arg as *mut ffi::c_void);
             tcp_recv(pcb, Some(tcp_recv_cb));
             tcp_sent(pcb, Some(tcp_sent_cb));
             tcp_err(pcb, Some(tcp_err_cb));
@@ -247,7 +250,7 @@ impl AsyncWrite for TcpStream {
         let err = unsafe {
             tcp_write(
                 self.pcb as *mut tcp_pcb,
-                buf.as_ptr() as *const raw::c_void,
+                buf.as_ptr() as *const ffi::c_void,
                 to_write as u16_t,
                 TCP_WRITE_FLAG_COPY as u8,
             )

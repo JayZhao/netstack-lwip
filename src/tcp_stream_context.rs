@@ -93,6 +93,6 @@ impl TcpStreamContext {
     ///
     /// Panics if another reference to inner data exists.
     pub unsafe fn assume_locked<'a>(ptr: *const Self) -> TcpStreamContextRef<'a> {
-        TcpStreamContextRef { ctx: &*ptr }
+        TcpStreamContextRef { ctx: unsafe { &*ptr } }
     }
 }
