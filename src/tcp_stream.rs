@@ -38,15 +38,17 @@ pub unsafe extern "C" fn tcp_recv_cb(
         return err_enum_t_ERR_OK as err_t;
     }
 
-    let pbuflen = unsafe { std::ptr::read_unaligned(p) }.tot_len;
-    let mut buf = Vec::with_capacity(pbuflen as usize);
+    let pbuflen = unsafe { std::ptr::read_unaligned(p) }.tot_len as usize;
+    let mut buf = super::buffer_pool::get(pbuflen);
     unsafe {
-        pbuf_copy_partial(p, buf.as_mut_ptr() as _, pbuflen, 0);
-        buf.set_len(pbuflen as usize);
+        pbuf_copy_partial(p, buf.as_mut_ptr() as _, pbuflen as u16_t, 0);
+        buf.set_len(pbuflen);
     }
 
     if !buf.is_empty() {
         ctx.read_tx.as_ref().map(|tx| tx.send(buf));
+    } else {
+        super::buffer_pool::put(buf);
     }
 
     unsafe { pbuf_free(p) };
@@ -186,9 +188,9 @@ impl AsyncRead for TcpStream {
         loop {
             match Pin::new(&mut ctx.read_rx).poll_recv(cx) {
                 Poll::Ready(Some(data)) => {
-                    // EOF
                     if data.is_empty() {
                         me.is_eof = true;
+                        super::buffer_pool::put(data);
                         return Poll::Ready(Ok(()));
                     }
                     unsafe { tcp_recved(me.pcb as *mut tcp_pcb, data.len() as u16_t) };
@@ -197,8 +199,10 @@ impl AsyncRead for TcpStream {
                     has_read_data = true;
                     if to_read < data.len() {
                         me.write_buf.extend_from_slice(&data[to_read..]);
+                        super::buffer_pool::put(data);
                         return Poll::Ready(Ok(()));
                     }
+                    super::buffer_pool::put(data);
                 }
                 Poll::Ready(None) => return Poll::Ready(Err(broken_pipe())),
                 Poll::Pending => {

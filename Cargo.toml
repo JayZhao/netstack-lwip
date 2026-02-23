@@ -16,6 +16,7 @@ log = "*"
 anyhow = "*"
 bytes = "*"
 thiserror = "*"
+crossbeam-queue = "0.3.12"
 
 [build-dependencies]
 cc = "*"

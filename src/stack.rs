@@ -134,8 +134,10 @@ impl Sink<Vec<u8>> for NetStack {
     }
 
     fn poll_flush(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        if let Some(item) = unsafe { self.get_unchecked_mut() }.sink_buf.take() {
+        let me = unsafe { self.get_unchecked_mut() };
+        if let Some(item) = me.sink_buf.take() {
             if item.is_empty() {
+                crate::buffer_pool::put(item);
                 return Poll::Ready(Ok(()));
             }
             unsafe {
@@ -144,6 +146,7 @@ impl Sink<Vec<u8>> for NetStack {
                 let pbuf = pbuf_alloc(pbuf_layer_PBUF_RAW, item.len() as u16_t, pbuf_type_PBUF_RAM);
                 if pbuf.is_null() {
                     log::trace!("pbuf_alloc null alloc");
+                    me.sink_buf.replace(item);
                     return Poll::Pending;
                 }
                 pbuf_take(
@@ -151,6 +154,7 @@ impl Sink<Vec<u8>> for NetStack {
                     item.as_ptr() as *const ffi::c_void,
                     item.len() as u16_t,
                 );
+                crate::buffer_pool::put(item);
 
                 if let Some(input_fn) = (*netif_list).input {
                     let err = input_fn(pbuf, netif_list);

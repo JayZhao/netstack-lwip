@@ -7,6 +7,7 @@ mod tcp_stream;
 mod tcp_stream_context;
 mod udp;
 mod util;
+pub(crate) mod buffer_pool;
 
 pub(crate) static LWIP_MUTEX: mutex::AtomicMutex = mutex::AtomicMutex::new();
 pub(crate) use mutex::AtomicMutexGuard as LWIPMutexGuard;
